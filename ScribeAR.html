@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ScribeAR">
+<meta name="theme-color" content="#0b5d47">
+<title>ScribeAR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: single centred column — upload card, live job, then transcript reader with tabs. */
+:root{
+  --bg:#f4f6f4; --surface:#ffffff; --fg:#14201c; --muted:#5e6b66; --line:#dde3df;
+  --accent:#0b5d47; --accent-soft:#e3efe9; --danger:#a3352b;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  --arabic:"IBM Plex Sans Arabic","Geeza Pro","Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0e1412; --surface:#161f1c; --fg:#e7eeea; --muted:#93a29c; --line:#26332e;
+  --accent:#4cc39c; --accent-soft:#16302a; --danger:#ff8a7d; color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 var(--sans);
+  padding:max(16px,env(safe-area-inset-top)) 16px max(32px,env(safe-area-inset-bottom))}
+.wrap{max-width:760px;margin:0 auto;display:grid;gap:14px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-block:6px 2px}
+h1{font-size:1.6rem;font-weight:600;margin:0;letter-spacing:-.01em}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:.85rem;margin:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px;min-width:0}
+label.drop{display:grid;place-items:center;text-align:center;gap:4px;padding:26px 14px;border:1.5px dashed var(--accent);
+  border-radius:12px;color:var(--accent);font-weight:600;cursor:pointer;word-break:break-word}
+label.drop small{color:var(--muted);font-weight:400}
+label.drop.has{border-style:solid;background:var(--accent-soft)}
+input[type=file]{display:none}
+.field{display:grid;gap:4px}
+.field label{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+input[type=text],input[type=password],select{width:100%;font:inherit;font-size:16px;padding:10px 12px;border-radius:10px;
+  border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1 1 180px;min-width:0}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:12px 14px;cursor:pointer;background:var(--accent);color:var(--surface)}
+button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);padding:9px 12px;font-size:.9rem}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,label.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+.status{font-size:.9rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.status.err{color:var(--danger)}
+details.settings summary{cursor:pointer;color:var(--muted);font-size:.9rem}
+details.settings[open]{display:grid;gap:10px}
+.note{font-size:.8rem;color:var(--muted);margin:0}
+.note a{color:var(--accent)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{background:none;color:var(--muted);border-radius:0;padding:8px 12px;border-bottom:2px solid transparent;font-weight:500}
+.tabs button[aria-selected=true]{color:var(--fg);border-bottom-color:var(--accent)}
+.reader{max-height:60vh;overflow-y:auto;display:grid;gap:14px;padding-right:4px}
+.seg{display:grid;gap:2px}
+.seg time{font:12px var(--mono);color:var(--muted)}
+.ar{font-family:var(--arabic);direction:rtl;text-align:right;font-size:1.15rem;line-height:1.9}
+.en{font-size:1rem}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.hist{display:grid;gap:6px}
+.hist button{background:var(--bg);color:var(--fg);border:1px solid var(--line);text-align:left;font-weight:500;display:flex;justify-content:space-between;gap:8px}
+.hist button span:last-child{color:var(--muted);font:12px var(--mono);white-space:nowrap}
+.hist button span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.06em}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.linkrow{display:flex;gap:8px}
+.linkrow input{flex:1;min-width:0}
+.warn{color:var(--danger)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Scribe<span>AR</span></h1>
+    <p class="sub">Arabic → English</p>
+  </header>
+
+  <section class="card" id="setupCard">
+    <div class="field">
+      <label for="key">Groq API key</label>
+      <input type="password" id="key" placeholder="gsk_…" autocomplete="off" spellcheck="false">
+    </div>
+    <p class="note">Free key: <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a>. It stays in this browser only.</p>
+  </section>
+
+  <section class="card">
+    <label class="drop" id="dropLbl" for="file">
+      <span id="dropTxt">＋ Choose audio or video</span>
+      <small id="dropSub">mp3, m4a, wav, mp4, mov, voice memos…</small>
+    </label>
+    <input type="file" id="file" accept="audio/*,video/*,.m4a,.mp3,.wav,.mp4,.mov,.ogg,.opus,.aac,.webm,.mkv">
+    <div class="or"><span>or paste a link</span></div>
+    <div class="linkrow">
+      <input type="text" id="link" inputmode="url" placeholder="https://… link to an audio or video file" autocomplete="off" spellcheck="false">
+      <button class="ghost" id="clearLink" type="button" hidden>Clear</button>
+    </div>
+    <p class="note" id="linkNote" hidden></p>
+    <div class="field">
+      <label for="ctx">Context (optional)</label>
+      <input type="text" id="ctx" placeholder="e.g. tafsir lecture, Surah al-Baqarah">
+    </div>
+    <details class="settings">
+      <summary>Settings</summary>
+      <div class="row">
+        <div class="field"><label for="asr">Transcription</label>
+          <select id="asr"><option value="whisper-large-v3">Whisper large-v3 (best)</option><option value="whisper-large-v3-turbo">Whisper large-v3 turbo (faster)</option></select></div>
+        <div class="field"><label for="llm">Translation model</label>
+          <input type="text" id="llm" value="openai/gpt-oss-120b" spellcheck="false"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="helper">Link helper address</label>
+          <input type="text" id="helper" inputmode="url" placeholder="https://yourname-scribear-helper.hf.space" spellcheck="false" autocomplete="off"></div>
+        <div class="field"><label for="hkey">Link helper key</label>
+          <input type="password" id="hkey" autocomplete="off" spellcheck="false"></div>
+      </div>
+      <p class="note">Needed for YouTube, TikTok, Instagram and X links.</p>
+      <button class="ghost" id="forget" type="button">Remove saved key</button>
+    </details>
+    <button id="go" disabled>Transcribe &amp; translate</button>
+    <div id="prog" hidden>
+      <div class="bar"><i id="barFill"></i></div>
+      <p class="status" id="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="card" id="result" hidden>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-v="bi" aria-selected="true">Both</button>
+      <button role="tab" data-v="en" aria-selected="false">English</button>
+      <button role="tab" data-v="ar" aria-selected="false">Arabic</button>
+    </div>
+    <div class="reader" id="reader"></div>
+    <div class="actions">
+      <button class="ghost" data-copy="en">Copy English</button>
+      <button class="ghost" data-copy="ar">Copy Arabic</button>
+      <button class="ghost" data-dl="en.srt">English .srt</button>
+      <button class="ghost" data-dl="ar.srt">Arabic .srt</button>
+      <button class="ghost" data-dl="ar-en.srt">Both .srt</button>
+      <button class="ghost" data-dl="en.txt">English .txt</button>
+    </div>
+  </section>
+
+  <section class="card" id="histCard" hidden>
+    <div class="field"><label>Recent</label></div>
+    <div class="hist" id="hist"></div>
+  </section>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const API="https://api.groq.com/openai/v1";
+const SR=16000, CHUNK_SEC=600; // 10-min chunks ≈ 19 MB WAV, under Groq's 25 MB limit
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+             set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let file=null, cur=null, view="bi", busy=false;
+
+// ---------- settings ----------
+$("#key").value=store.get("key","");
+$("#llm").value=store.get("llm","openai/gpt-oss-120b");
+$("#asr").value=store.get("asr","whisper-large-v3");
+const syncSetup=()=>{$("#setupCard").hidden=!!$("#key").value.trim()&&store.get("key","")===$("#key").value.trim(); canGo()};
+$("#key").addEventListener("change",()=>{store.set("key",$("#key").value.trim());syncSetup()});
+$("#key").addEventListener("input",canGo);
+$("#llm").addEventListener("change",()=>store.set("llm",$("#llm").value.trim()));
+$("#helper").value=store.get("helper","");$("#hkey").value=store.get("hkey","");
+const helperUrl=()=>$("#helper").value.trim().replace(/\/+$/,"");
+$("#helper").addEventListener("change",()=>{store.set("helper",helperUrl());linkInfo()});
+$("#hkey").addEventListener("change",()=>store.set("hkey",$("#hkey").value.trim()));
+$("#asr").addEventListener("change",()=>store.set("asr",$("#asr").value));
+$("#forget").onclick=()=>{store.set("key","");$("#key").value="";$("#setupCard").hidden=false;canGo()};
+const linkVal=()=>$("#link").value.trim();
+function canGo(){$("#go").disabled=busy||!(file||linkVal())||!$("#key").value.trim()}
+const SOCIAL=/(^|\.)(youtube\.com|youtu\.be|tiktok\.com|instagram\.com|facebook\.com|fb\.watch|x\.com|twitter\.com|snapchat\.com)$/i;
+function linkInfo(){
+  const v=linkVal();$("#clearLink").hidden=!v;
+  let note="",warn=false;
+  if(v){
+    let u=null;try{u=new URL(v)}catch(e){}
+    if(!u||!/^https?:$/.test(u.protocol)){note="That doesn't look like a web link. It should start with https://";warn=true}
+    else if(SOCIAL.test(u.hostname)&&!helperUrl()){note="YouTube, TikTok, Instagram and X links need the link helper. Add its address and key in Settings.";warn=true}
+    else if(file){note="The link will be used instead of the chosen file."}
+  }
+  $("#linkNote").hidden=!note;$("#linkNote").textContent=note;$("#linkNote").classList.toggle("warn",warn);
+  canGo();
+}
+$("#link").addEventListener("input",linkInfo);
+$("#clearLink").onclick=()=>{$("#link").value="";linkInfo()};
+$("#file").onchange=e=>{file=e.target.files[0]||null;linkInfo();
+  $("#dropTxt").textContent=file?file.name:"＋ Choose audio or video";
+  $("#dropSub").textContent=file?(file.size/1048576).toFixed(1)+" MB · tap to change":"mp3, m4a, wav, mp4, mov, voice memos…";
+  $("#dropLbl").classList.toggle("has",!!file);canGo()};
+syncSetup();
+
+// ---------- helpers ----------
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function setStatus(t,p,err){$("#prog").hidden=false;$("#status").textContent=t;$("#status").classList.toggle("err",!!err);if(p!=null)$("#barFill").style.width=Math.max(0,Math.min(100,p))+"%"}
+const pad=(n,w=2)=>String(n).padStart(w,"0");
+function ts(t,sep=","){t=Math.max(0,t);const ms=Math.round(t*1000);return pad(Math.floor(ms/3600000))+":"+pad(Math.floor(ms/60000)%60)+":"+pad(Math.floor(ms/1000)%60)+sep+pad(ms%1000,3)}
+function shortTs(t){t=Math.floor(t);const h=Math.floor(t/3600),m=Math.floor(t/60)%60,s=t%60;return (h?h+":"+pad(m):m)+":"+pad(s)}
+const esc=s=>(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// ---------- audio: decode, downmix, resample, chunk at quiet points ----------
+async function decode(f){
+  const buf=await f.arrayBuffer();
+  const AC=window.AudioContext||window.webkitAudioContext;
+  const ac=new AC();
+  const audio=await new Promise((res,rej)=>{const p=ac.decodeAudioData(buf,res,rej);if(p&&p.then)p.then(res,rej)});
+  ac.close&&ac.close();
+  const len=Math.ceil(audio.duration*SR);
+  const off=new OfflineAudioContext(1,len,SR);
+  const src=off.createBufferSource();src.buffer=audio;src.connect(off.destination);src.start();
+  const out=await off.startRendering();
+  return out.getChannelData(0);
+}
+function quietSplit(pcm,start,target){
+  // look back up to 20s from target for the quietest 0.4s window
+  const win=Math.floor(.4*SR), from=Math.max(start+SR*60,target-SR*20);
+  let best=target, bestE=Infinity;
+  for(let i=from;i+win<=target;i+=Math.floor(win/2)){
+    let e=0;for(let j=i;j<i+win;j+=8)e+=pcm[j]*pcm[j];
+    if(e<bestE){bestE=e;best=i+Math.floor(win/2)}
+  }
+  return best;
+}
+function chunks(pcm){
+  const out=[];let s=0;const max=CHUNK_SEC*SR;
+  while(s<pcm.length){
+    let e=s+max>=pcm.length?pcm.length:quietSplit(pcm,s,s+max);
+    out.push({start:s/SR,pcm:pcm.subarray(s,e)});s=e;
+  }
+  return out;
+}
+function wav(pcm){
+  const b=new ArrayBuffer(44+pcm.length*2),v=new DataView(b);
+  const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+  w(0,"RIFF");v.setUint32(4,36+pcm.length*2,true);w(8,"WAVE");w(12,"fmt ");v.setUint32(16,16,true);
+  v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,SR,true);v.setUint32(28,SR*2,true);
+  v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,pcm.length*2,true);
+  for(let i=0,o=44;i<pcm.length;i++,o+=2){const x=Math.max(-1,Math.min(1,pcm[i]));v.setInt16(o,x<0?x*32768:x*32767,true)}
+  return new Blob([b],{type:"audio/wav"});
+}
+
+// ---------- Groq calls with rate-limit handling ----------
+async function groq(path,opts,label){
+  for(let attempt=0;attempt<6;attempt++){
+    let r;
+    try{r=await fetch(API+path,{...opts,headers:{...(opts.headers||{}),Authorization:"Bearer "+$("#key").value.trim()}})}
+    catch(e){if(attempt<2){await sleep(2000);continue}throw new Error("Network error. Check your connection and try again.")}
+    if(r.ok)return r.json();
+    let msg="";try{msg=(await r.json()).error?.message||""}catch(e){}
+    if(r.status===401)throw new Error("Groq rejected the API key. Paste a valid key from console.groq.com/keys.");
+    if(r.status===429||r.status>=500){
+      let wait=parseFloat(r.headers.get("retry-after"))||0;
+      const m=/try again in ([\d.]+)(m|s)/i.exec(msg);if(m)wait=parseFloat(m[1])*(m[2].toLowerCase()==="m"?60:1);
+      wait=Math.max(wait,5*(attempt+1));
+      if(wait>900)throw new Error("Groq's free limit is used up for now. "+msg);
+      for(let s=Math.ceil(wait);s>0;s--){setStatus(label+" · rate limited, retrying in "+s+"s");await sleep(1000)}
+      continue;
+    }
+    throw new Error("Groq error "+r.status+": "+(msg||r.statusText));
+  }
+  throw new Error("Groq kept refusing the request. Try again in a few minutes.");
+}
+function audioForm(part,model,ctx){
+  const fd=new FormData();
+  if(part.url)fd.append("url",part.url);else fd.append("file",part.blob,part.name);
+  fd.append("model",model);fd.append("response_format","verbose_json");fd.append("temperature","0");
+  if(ctx)fd.append("prompt",ctx.slice(0,200));
+  return fd;
+}
+async function transcribe(part,ctx,label){
+  const fd=audioForm(part,$("#asr").value,ctx);fd.append("language","ar");
+  return groq("/audio/transcriptions",{method:"POST",body:fd},label);
+}
+// Whisper's built-in translation, used only if the text models fail
+async function whisperTranslate(parts,segs,label){
+  const en=[];
+  for(let i=0;i<parts.length;i++){
+    setStatus(label+" · part "+(i+1)+" of "+parts.length,66+34*i/parts.length);
+    const j=await groq("/audio/translations",{method:"POST",body:audioForm(parts[i],"whisper-large-v3","")},label);
+    for(const s of (j.segments||[]))en.push({start:s.start+parts[i].start,end:s.end+parts[i].start,text:(s.text||"").trim()});
+  }
+  segs.forEach(s=>s.en="");
+  for(const e of en){
+    if(!e.text)continue;
+    const mid=(e.start+e.end)/2;let best=null,bd=1e9;
+    for(const s of segs){if(mid>=s.start&&mid<=s.end){best=s;break}const d=Math.min(Math.abs(mid-s.start),Math.abs(mid-s.end));if(d<bd){bd=d;best=s}}
+    if(best)best.en=(best.en+" "+e.text).trim();
+  }
+}
+function parseList(text,n){
+  text=(text||"").replace(/<think>[\s\S]*?<\/think>/g,"").trim();
+  const tries=[];
+  const a=text.indexOf("{"),b=text.lastIndexOf("}");if(a>=0&&b>a)tries.push(text.slice(a,b+1));
+  const c=text.indexOf("["),d=text.lastIndexOf("]");if(c>=0&&d>c)tries.push(text.slice(c,d+1));
+  for(const t of tries){
+    try{let v=JSON.parse(t);
+      if(!Array.isArray(v)&&v&&typeof v==="object")v=Object.values(v).find(Array.isArray)||null;
+      if(Array.isArray(v)&&v.length)return v.map(x=>typeof x==="string"?x:(x&&(x.en||x.text||x.translation))||String(x));
+    }catch(e){}
+  }
+  const lines=[];for(const m of text.matchAll(/^\s*(\d+)[.)]\s*(.+)$/gm))lines[+m[1]-1]=m[2].trim();
+  return lines.filter(x=>x!=null).length>=Math.ceil(n/2)?Array.from({length:n},(_,i)=>lines[i]||""):null;
+}
+let goodModel=null;
+async function translate(lines,ctx,onProg){
+  const pref=$("#llm").value.trim();
+  const models=[...new Set([goodModel,pref,"openai/gpt-oss-120b","llama-3.3-70b-versatile","qwen/qwen3-32b","llama-3.1-8b-instant"].filter(Boolean))];
+  const sys="You translate Arabic speech transcripts into English subtitles. Lines come from automatic speech recognition and may contain small errors; translate the intended meaning. "+
+    "Write natural, accurate English. For Quranic verses give a faithful standard-style rendering. Keep honorifics such as (peace be upon him). "+
+    "Reply with ONLY a JSON object {\"t\":[...]} holding exactly one English string per input line, same order. No other text."+(ctx?" Context: "+ctx:"");
+  const out=[],B=25;let lastErr="";
+  for(let i=0;i<lines.length;i+=B){
+    const chunk=lines.slice(i,i+B), prev=lines.slice(Math.max(0,i-4),i);
+    const user=(prev.length?"Earlier lines for context only (do not translate):\n"+prev.join("\n")+"\n\n":"")+
+      "Translate these "+chunk.length+" lines:\n"+chunk.map((t,j)=>(j+1)+". "+t).join("\n");
+    let res=null;
+    for(const model of models){
+      for(let a=0;a<2&&!res;a++){
+        try{
+          const j=await groq("/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({model,temperature:.2,max_tokens:6000,messages:[{role:"system",content:sys},{role:"user",content:user}]})},"Translating");
+          res=parseList(j.choices?.[0]?.message?.content,chunk.length);
+          if(!res)lastErr=model+" gave an unreadable reply";
+        }catch(e){lastErr=model+": "+e.message;if(/API key/.test(e.message))throw e;if(/not found|decommission|does not exist|model_not/i.test(e.message))break}
+      }
+      if(res){goodModel=model;break}
+    }
+    if(!res){const err=new Error(lastErr||"translation failed");err.translateFail=true;throw err}
+    res=res.concat(Array(chunk.length).fill("")).slice(0,chunk.length);
+    out.push(...res);onProg(Math.min(i+B,lines.length),lines.length);
+  }
+  return out;
+}
+
+// ---------- get audio parts from a file or a link ----------
+const GROQ_OK=/\.(flac|mp3|mp4|mpeg|mpga|m4a|ogg|opus|wav|webm)$/i, DIRECT_MAX=24*1048576;
+async function partsFromFile(f){
+  // small files in a format Groq accepts go straight up: fastest, and light on phone memory
+  if(f.size<=DIRECT_MAX&&GROQ_OK.test(f.name||""))return [{start:0,blob:f,name:f.name}];
+  try{
+    const pcm=await decode(f);
+    return chunks(pcm).map((c,i)=>({start:c.start,blob:wav(c.pcm),name:"part"+i+".wav"}));
+  }catch(e){
+    if(f.size>25*1048576)throw new Error("This browser couldn't read that file, and it's too big to send as-is (over 25 MB). Try exporting it as mp3 or m4a.");
+    return [{start:0,blob:f,name:f.name||"audio.mp3"}];
+  }
+}
+async function download(r,label){
+  const total=+r.headers.get("content-length")||0;
+  const reader=r.body.getReader();const bufs=[];let got=0;
+  for(;;){const {done,value}=await reader.read();if(done)break;bufs.push(value);got+=value.length;
+    setStatus(label+" "+(got/1048576).toFixed(1)+" MB"+(total?" of "+(total/1048576).toFixed(1):""),total?2+3*got/total:3)}
+  return bufs;
+}
+async function viaHelper(url){
+  const h=helperUrl();
+  if(!h)throw new Error("YouTube, TikTok, Instagram and X links need the link helper. Add its address and key in Settings.");
+  setStatus("Link helper is downloading the audio… (can take a minute)",2);
+  let r;
+  try{r=await fetch(h+"/audio?url="+encodeURIComponent(url)+"&key="+encodeURIComponent($("#hkey").value.trim()))}
+  catch(e){throw new Error("Couldn't reach the link helper. Check the address in Settings. A sleeping helper takes about 30s to wake; try again.")}
+  if(!r.ok){let m="";try{m=(await r.json()).error}catch(e){}throw new Error(m||"Link helper error "+r.status)}
+  const title=(r.headers.get("x-title")||"audio").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(+n));
+  const bufs=await download(r,"Receiving audio…");
+  return {name:title,parts:await partsFromFile(new File(bufs,"audio.mp3",{type:"audio/mpeg"}))};
+}
+async function partsFromLink(url){
+  let u;try{u=new URL(url)}catch(e){throw new Error("That link isn't valid. It should start with https://")}
+  if(SOCIAL.test(u.hostname))return viaHelper(url);
+  setStatus("Downloading from link…",2);
+  let page=false;
+  try{
+    const r=await fetch(url);
+    if(r.ok){
+      const type=r.headers.get("content-type")||"";
+      if(/text\/html/i.test(type))page=true;
+      else{
+        const name=decodeURIComponent(u.pathname.split("/").pop()||"link-audio");
+        const bufs=await download(r,"Downloading from link…");
+        return {name,parts:await partsFromFile(new File(bufs,name,{type}))};
+      }
+    }
+  }catch(e){}
+  // a web page, or a site that blocks browser downloads: the helper handles most of these
+  if(helperUrl())return viaHelper(url);
+  if(page)throw new Error("That link opens a web page, not a media file. Set up the link helper (Settings) to use page links.");
+  return {name:decodeURIComponent(u.pathname.split("/").pop()||u.hostname),parts:[{start:0,url}]};
+}
+
+// ---------- main ----------
+$("#go").onclick=async()=>{
+  if(busy)return;
+  const link=linkVal();
+  if(!file&&!link)return;
+  store.set("key",$("#key").value.trim());syncSetup();
+  busy=true;canGo();
+  const ctx=$("#ctx").value.trim();
+  try{
+    let parts,name;
+    if(link){const r=await partsFromLink(link);parts=r.parts;name=r.name}
+    else{setStatus("Reading file…",2);parts=await partsFromFile(file);name=file.name}
+    const segs=[];
+    for(let i=0;i<parts.length;i++){
+      const label="Transcribing part "+(i+1)+" of "+parts.length;
+      setStatus(label+"…",5+60*i/parts.length);
+      let j;
+      try{j=await transcribe(parts[i],ctx,label)}
+      catch(e){if(parts[i].url)throw new Error("Groq couldn't fetch that link. It must be a public, direct audio/video file under 25 MB. Details: "+e.message);throw e}
+      const ss=j.segments&&j.segments.length?j.segments:[{start:0,end:j.duration||0,text:j.text||""}];
+      for(const s of ss){const t=(s.text||"").trim();if(t)segs.push({start:s.start+parts[i].start,end:s.end+parts[i].start,ar:t,en:""})}
+    }
+    if(!segs.length)throw new Error("No speech was found in that audio.");
+    let note="";
+    setStatus("Translating…",66);
+    try{
+      const en=await translate(segs.map(s=>s.ar),ctx,(d,n)=>setStatus("Translating "+d+" / "+n+" lines",66+34*d/n));
+      segs.forEach((s,i)=>s.en=(en[i]||"").trim());
+    }catch(e){
+      if(!e.translateFail)throw e;
+      note=" · used Whisper's translation ("+e.message+")";
+      await whisperTranslate(parts,segs,"Translating with Whisper");
+    }
+    cur={id:Date.now(),name,segs,when:new Date().toISOString()};
+    saveHist(cur);show(cur);
+    const missing=segs.filter(s=>!s.en).length;
+    setStatus("Done · "+segs.length+" lines · "+shortTs(segs[segs.length-1].end)+note+(missing?" · "+missing+" lines without English":""),100);
+  }catch(e){setStatus(e.message||String(e),null,true)}
+  finally{busy=false;canGo()}
+};
+
+// ---------- display & export ----------
+function render(){
+  if(!cur)return;
+  $("#reader").innerHTML=cur.segs.map(s=>'<div class="seg"><time>'+shortTs(s.start)+'</time>'+
+    (view!=="en"?'<div class="ar" lang="ar">'+esc(s.ar)+'</div>':'')+
+    (view!=="ar"?'<div class="en">'+esc(s.en)+'</div>':'')+'</div>').join("");
+}
+function show(job){cur=job;$("#result").hidden=false;render();$("#result").scrollIntoView({behavior:"smooth",block:"start"})}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{view=b.dataset.v;
+  document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));render()});
+function srt(key){let n=0;return cur.segs.map(s=>{const t=(key==="bi"?(s.ar+"\n"+s.en):s[key]).trim();if(!t)return"";n++;
+  return n+"\n"+ts(s.start)+" --> "+ts(s.end)+"\n"+t+"\n"}).filter(Boolean).join("\n")}
+const plain=k=>cur.segs.map(s=>s[k]).filter(Boolean).join("\n");
+document.querySelectorAll("[data-copy]").forEach(b=>b.onclick=async()=>{
+  const t=plain(b.dataset.copy), old=b.textContent;
+  try{await navigator.clipboard.writeText(t)}catch(e){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy")}catch(_){}a.remove()}
+  b.textContent="Copied";setTimeout(()=>b.textContent=old,1500)});
+document.querySelectorAll("[data-dl]").forEach(b=>b.onclick=()=>{
+  const kind=b.dataset.dl, base=cur.name.replace(/\.[^.]+$/,"");
+  const body=kind==="en.txt"?plain("en"):srt(kind==="ar-en.srt"?"bi":kind.slice(0,2));
+  const blob=new Blob(["﻿"+body],{type:"text/plain;charset=utf-8"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=base+"."+kind;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)});
+
+// ---------- history (this browser only) ----------
+function saveHist(job){let h=store.get("hist",[]).filter(x=>x.id!==job.id);h.unshift(job);
+  while(h.length>15)h.pop();
+  for(;;){try{localStorage.setItem("hist",JSON.stringify(h));break}catch(e){if(!h.pop())break}}
+  drawHist()}
+function drawHist(){const h=store.get("hist",[]);$("#histCard").hidden=!h.length;
+  $("#hist").innerHTML=h.map((j,i)=>'<button data-i="'+i+'"><span>'+esc(j.name)+'</span><span>'+new Date(j.when).toLocaleDateString()+'</span></button>').join("");
+  $("#hist").querySelectorAll("button").forEach(b=>b.onclick=()=>show(store.get("hist",[])[+b.dataset.i]))}
+drawHist();
+</script>
+</body>
+</html>
